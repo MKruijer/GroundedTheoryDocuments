@@ -1,66 +1,105 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import psycopg as psycopg
 from scipy.optimize import curve_fit
 from scipy.stats import linregress
 
 
-def main_function():
-    precision_values = [
-        1, 1, 1, 1, 1, 1, 1, 1, 1,
-        0.909090909, 0.916666667, 0.923076923, 0.928571429, 0.866666667, 0.875, 0.882352941, 0.888888889, 0.894736842,
-        0.9,
-        0.904761905, 0.909090909, 0.913043478, 0.916666667, 0.92, 0.923076923, 0.925925926, 0.928571429, 0.896551724,
-        0.9,
-        0.903225806, 0.90625, 0.878787879, 0.882352941, 0.885714286, 0.861111111, 0.864864865, 0.868421053, 0.871794872,
-        0.85,
-        0.829268293, 0.833333333, 0.837209302, 0.840909091, 0.844444444, 0.847826087, 0.829787234, 0.833333333,
-        0.836734694, 0.84,
-        0.843137255, 0.846153846, 0.849056604, 0.851851852, 0.854545455, 0.857142857, 0.842105263, 0.844827586,
-        0.830508475, 0.816666667,
-        0.819672131, 0.806451613, 0.793650794, 0.78125, 0.784615385, 0.787878788, 0.776119403, 0.764705882, 0.753623188,
-        0.742857143,
-        0.732394366, 0.722222222, 0.726027397, 0.716216216, 0.72, 0.723684211, 0.714285714, 0.717948718, 0.708860759,
-        0.7,
-        0.703703704, 0.707317073, 0.710843373, 0.702380952, 0.694117647, 0.686046512, 0.67816092, 0.681818182,
-        0.674157303, 0.666666667,
-        0.659340659, 0.652173913, 0.64516129, 0.638297872, 0.642105263, 0.635416667, 0.628865979, 0.62244898,
-        0.626262626, 0.62
-    ]
+def get_precision_values_from_database(table_name, orderby_column_name, cursor):
+    query = f"""
+            SELECT pattern FROM {table_name}
+            order by {orderby_column_name} desc
+            limit 100;
+            """
+    cursor.execute(query)
+    iter1patterns = cursor.fetchall()
+    pattern_values = [pattern_dict["pattern"] for pattern_dict in iter1patterns]
 
-    # Generate x-values for the data entry indices
-    x_values = np.arange(1, len(precision_values) + 1)
+    precision_values = [0.0] * len(pattern_values)
+    amount_of_related = 0
+    for i in range(1, len(pattern_values) + 1):
+        if pattern_values[i - 1] > 0:
+            amount_of_related += 1
+        precision_values[i - 1] = amount_of_related / i
+    return precision_values
 
-    # Define the quadratic function
-    def quadratic_func(x, a, b, c):
-        return a * x ** 2 + b * x + c
 
-    # Perform curve fitting to find the best-fit quadratic curve
-    popt_quadratic, _ = curve_fit(quadratic_func, x_values, precision_values)
+# Function to plot the arch_issue precision graph
+def plot_arch_issue_precision(iter0_arch_issue_precision, iter1_arch_issue_precision,
+                              iter2_arch_issue_precision, iter3_arch_issue_precision,
+                              iter4_arch_issue_precision):
+    # Generate x-values for the data entry indices (assuming all lists have the same length)
+    x_values = np.arange(1, len(iter1_arch_issue_precision) + 1)
 
-    # Generate the y-values for the quadratic curve
-    y_values_quadratic = quadratic_func(x_values, *popt_quadratic)
+    # Set the figure size
+    plt.figure(figsize=(10, 6))  # Adjust the width and height as needed
 
-    # Perform linear regression to find the best-fit line
-    slope, intercept, _, _, _ = linregress(x_values, precision_values)
-    y_values_linear = slope * x_values + intercept
+    # Plot each list with a different color and label
+    plt.plot(x_values, iter0_arch_issue_precision, label='Iter0', color='#9400D3')
+    plt.plot(x_values, iter1_arch_issue_precision, label='Iter1', color='g')
+    plt.plot(x_values, iter2_arch_issue_precision, label='Iter2', color='c')
+    plt.plot(x_values, iter3_arch_issue_precision, label='Iter3', color='y')
+    plt.plot(x_values, iter4_arch_issue_precision, label='Iter4', color='k')
 
-    # Set the figure size and adjust spacing
-    plt.figure(figsize=(12, 6))  # Adjust the width and height as needed
+    # Set the y-axis limits (if needed)
+    plt.ylim(0.0, 1.1)
 
-    # Plot the precision values, quadratic trendline, and linear trendline
-    plt.plot(x_values, precision_values, 'bo-', label='Precision Values', markersize=4)
-    plt.plot(x_values, y_values_quadratic, 'r-', label='Quadratic Trendline')
-    plt.plot(x_values, y_values_linear, 'g-', label='Linear Trendline')
-
-    plt.xlabel('Pairs')
-    plt.ylabel('Precision score ')
-    plt.title('Iteration 4 - Architectural Issue All Emails NO DUPLICATES - Precision Trendlines')
-
-    plt.xticks(x_values[::2])  # Adjust the step size as needed
+    plt.xlabel('Pair Index')
+    plt.ylabel('Precision')
+    plt.title('Precision Graph for Architectural Issue All Email pairs')
     plt.legend()
-    # Set y-axis limits
-    plt.ylim(0.0, 1.0)
     plt.show()
+
+
+# Function to plot the arch_email precision graph
+def plot_arch_email_precision(iter0_arch_email_precision, iter1_arch_email_precision,
+                              iter2_arch_email_precision, iter3_arch_email_precision):
+    # Generate x-values for the data entry indices (assuming all lists have the same length)
+    x_values = np.arange(1, len(iter1_arch_email_precision) + 1)
+
+    # Set the figure size
+    plt.figure(figsize=(10, 6))  # Adjust the width and height as needed
+
+    # Plot each list with a different color and label
+    plt.plot(x_values, iter0_arch_email_precision, label='Iter0', color='#FF8C00')
+    plt.plot(x_values, iter1_arch_email_precision, label='Iter1', color='b')
+    plt.plot(x_values, iter2_arch_email_precision, label='Iter2', color='r')
+    plt.plot(x_values, iter3_arch_email_precision, label='Iter3', color='m')
+
+    # Set the y-axis limits (if needed)
+    plt.ylim(0.0, 1.1)
+
+    plt.xlabel('Pair Index')
+    plt.ylabel('Precision')
+    plt.title('Precision Graph for Architectural Email All Issue pairs')
+    plt.legend()
+    plt.show()
+
+
+def main_function():
+    with psycopg.connect(
+            host="localhost",
+            dbname="relationsDB",
+            user="postgres",
+            password="UnsavePassword",
+            port=5432) as connection:
+        cursor = connection.cursor(row_factory=psycopg.rows.dict_row)
+        iter0_arch_email_precision = get_precision_values_from_database("iter0_expanded_arch_emails_all_issues", "similarity", cursor)
+        iter0_arch_issue_precision = get_precision_values_from_database("iter0_expanded_arch_issues_all_emails", "similarity", cursor)
+        iter1_arch_email_precision = get_precision_values_from_database("iter1_analysis_unique_pairs_arch_emails_all_issues", "similarity", cursor)
+        iter1_arch_issue_precision = get_precision_values_from_database("iter1_analysis_unique_pairs_arch_issues_all_emails", "similarity", cursor)
+        iter2_arch_email_precision = get_precision_values_from_database("iter2_unique_filtered_sim_arch_emails_all_issues", "similarity", cursor)
+        iter2_arch_issue_precision = get_precision_values_from_database("iter2_unique_filtered_sim_arch_issues_all_emails", "similarity", cursor)
+        iter3_arch_email_precision = get_precision_values_from_database("iter3_average_similarity_arch_emails_all_issues", "average_similarity", cursor)
+        iter3_arch_issue_precision = get_precision_values_from_database("iter3_average_similarity_arch_issues_all_emails", "average_similarity", cursor)
+        iter4_arch_issue_precision = get_precision_values_from_database("iter4_average_similarity_arch_issues_all_emails", "average_similarity", cursor)
+
+    plot_arch_issue_precision(iter0_arch_issue_precision, iter1_arch_issue_precision,
+                              iter2_arch_issue_precision, iter3_arch_issue_precision,
+                              iter4_arch_issue_precision)
+
+    plot_arch_email_precision(iter0_arch_email_precision, iter1_arch_email_precision,
+                              iter2_arch_email_precision, iter3_arch_email_precision)
 
 
 if __name__ == '__main__':
